@@ -260,6 +260,7 @@ async function main() {
               if (!window.IntersectionObserver) window.IntersectionObserver = function(cb){ this.observe = (el)=>{ try{ cb([{target:el,isIntersecting:true,intersectionRatio:1}]); }catch(e){} }; this.unobserve=()=>{}; this.disconnect=()=>{}; };
               if (!window.Image) window.Image = function(){ return { set src(v){}, set onload(v){}, set onerror(v){}, set width(v){}, set height(v){} }; };
               if (!window.localStorage) window.localStorage = (function(){const s={}; return {getItem:k=>s[k]||null,setItem:(k,v)=>s[k]=String(v),removeItem:k=>delete s[k],clear:()=>{Object.keys(s).forEach(k=>delete s[k])}} })();
+              if (!window.matchMedia) window.matchMedia = (query) => ({ matches: false, media: query, onchange: null, addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => {} });
               // basic fetch passthrough using undici
               // also track pending requests for network-idle detection
               window.__pendingRequests = 0;
@@ -272,7 +273,9 @@ async function main() {
                   window.__incPending();
                 }catch(e){}
                 try {
-                  const r = await _origFetch(input, { ...init, ..._fetchOpts });
+                  // Resolve relative URLs against the JSDOM URL
+                  const resolvedInput = (typeof input === 'string' && input.startsWith('/')) ? new URL(input, dom.window.location.href).href : input;
+                  const r = await _origFetch(resolvedInput, { ...init, ..._fetchOpts });
                   const b = await r.arrayBuffer();
                   const body = Buffer.from(b);
                   return { ok: r.status>=200&&r.status<300, status: r.status, text: async ()=>body.toString('utf8'), json: async ()=>JSON.parse(body.toString('utf8')), arrayBuffer: async ()=>b, headers: {} };
