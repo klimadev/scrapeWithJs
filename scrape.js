@@ -4,14 +4,9 @@
   Pipeline:
    1) simple fetch and return HTML
    2) jsdom render (execute JS) with polyfills and interaction simulation
-   3) fallback to Playwright WebKit if heuristics say jsdom didn't produce final content
-
+  
   Usage:
     node scrape_universal.js <url> [--out file] [--timeout ms] [--force-browser] [--diagnose]
-
-  Note: Playwright is optional. To enable the browser fallback install:
-    npm install playwright
-  or to install only WebKit binary use `playwright install webkit` after npm install.
 */
 
 const fs = require('fs');
@@ -168,23 +163,6 @@ function needBrowserFallback(html, opts = {}) {
   return false;
 }
 
-async function renderWithPlaywright(url, opts = {}) {
-  let playwright;
-  try { playwright = require('playwright'); } catch (e) { throw new Error('Playwright not installed. Run: npm install playwright'); }
-  const browser = await playwright.webkit.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const page = await context.newPage();
-  if (opts.diagnose) page.on('console', msg => console.log('[PW]', msg.type(), msg.text()));
-  await page.goto(url, { waitUntil: 'networkidle', timeout: opts.timeout || 30000 });
-  // extra wait to allow rendering
-  await page.waitForTimeout(opts.extraWait || 500);
-  // try some interactions to trigger lazy loads
-  try { await page.evaluate(()=>{ window.scrollTo(0, document.body.scrollHeight); }); await page.waitForTimeout(300); } catch(e){}
-  const content = await page.content();
-  await browser.close();
-  return content;
-}
-
 async function main() {
   const argv = process.argv.slice(2);
   if (argv.length === 0) { console.error('Usage: node scrape_universal.js <url> [--out file] [--timeout ms] [--force-browser] [--diagnose]'); process.exit(2); }
@@ -214,15 +192,6 @@ async function main() {
         if (!needBrowserFallback(jsdomHtml)) { if (out) fs.writeFileSync(out, jsdomHtml, 'utf8'); else process.stdout.write(jsdomHtml); return; }
         if (diagnose) console.log('[universal] jsdom indicates fallback needed');
       } catch(e) { if (diagnose) console.error('[universal] jsdom render failed', e && e.message); }
-    }
-
-    // 3) fallback to Playwright
-    try {
-      const pw = await renderWithPlaywright(url, { timeout: Math.max(timeout, 20000), diagnose });
-      if (out) fs.writeFileSync(out, pw, 'utf8'); else process.stdout.write(pw);
-      return;
-    } catch (e) {
-      console.error('Browser fallback failed:', e && e.message ? e.message : e);
     }
 
     // as last resort, try simple fetch again and return
