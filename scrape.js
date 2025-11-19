@@ -82,6 +82,7 @@ async function renderWithJsdom(url, opts = {}) {
           } catch (e) {}
         };
         if (!window.IntersectionObserver) window.IntersectionObserver = function(cb){ this.observe = (el)=>{ try{ cb([{target:el,isIntersecting:true,intersectionRatio:1}]); }catch(e){} }; this.unobserve=()=>{}; this.disconnect=()=>{}; };
+        if (!window.Image) window.Image = function(){ return { set src(v){}, set onload(v){}, set onerror(v){}, set width(v){}, set height(v){} }; };
         if (!window.localStorage) window.localStorage = (function(){const s={}; return {getItem:k=>s[k]||null,setItem:(k,v)=>s[k]=String(v),removeItem:k=>delete s[k],clear:()=>{Object.keys(s).forEach(k=>delete s[k])}} })();
         // basic fetch passthrough using undici
         // also track pending requests for network-idle detection

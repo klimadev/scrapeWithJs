@@ -26,34 +26,29 @@ function performRadialSearch(document, term, opts = {}) {
   for (const textNode of textNodes) {
     let el = textNode.parentElement;
     let best = el;
-    let repeatCount = 1;
+    let repeatCount = 1; // Repetition is ignored, but kept for compatibility
+
+    // Ascend 'radiusLevels' times to capture context
     for (let i = 0; i < radiusLevels && el; i++) {
-      // Heurística: contar quantos irmãos com mesma tagName e classe
-      if (el.parentElement) {
-        const siblings = Array.from(el.parentElement.children).filter(sib =>
-          sib !== el && sib.tagName === el.tagName && sib.className === el.className
-        );
-        if (siblings.length + 1 >= minRepeat) {
-          best = el;
-          repeatCount = siblings.length + 1;
-          break;
-        }
-        el = el.parentElement;
+      const parent = el.parentElement;
+      if (parent && parent.tagName !== 'BODY' && parent.tagName !== 'HTML') {
+        el = parent;
+        best = el; // 'best' is the highest ancestor found so far
+      } else {
+        break;
       }
     }
-    // 3. Promover 'best' para o pai se foi encontrado um elemento repetido, para capturar mais contexto.
-    if (repeatCount > 1 && best.parentElement && best.parentElement.tagName !== 'BODY' && best.parentElement.tagName !== 'HTML') {
-      best = best.parentElement;
-      // We keep the original repeatCount, as it refers to the number of items this container holds.
-    }
 
-    // 4. Extrair HTML do container
+    // 3. Extrair HTML do container (o elemento 'best' é o ancestral encontrado)
     if (best && best.outerHTML) {
+      // The selector is based on the extracted element.
+      const contextSelector = best.className ? `.${best.className.split(' ').join('.')}` : best.tagName;
+
       results.push({
         html: best.outerHTML,
-        selector: best.className ? `.${best.className.split(' ').join('.')}` : best.tagName,
-        repeatCount,
-        method: 'radial',
+        selector: contextSelector,
+        repeatCount: 1, // Always 1 since repetition is ignored
+        method: 'fixed_radial',
         term
       });
     }
