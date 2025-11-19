@@ -10,12 +10,16 @@ function performRadialSearch(document, term, opts = {}) {
   // 1. Encontrar todos os nós de texto que mencionam o termo
   function findTextNodes(node) {
     const nodes = [];
-    if (node.nodeType === 3 && node.textContent.toLowerCase().includes(lowerTerm)) {
-      nodes.push(node);
-    } else if (node.nodeType === 1) {
+    if (node.nodeType === 1) {
+      const tagName = node.tagName.toUpperCase();
+      if (tagName === 'SCRIPT' || tagName === 'STYLE') {
+        return nodes; // Skip script and style tags entirely
+      }
       for (const child of node.childNodes) {
         nodes.push(...findTextNodes(child));
       }
+    } else if (node.nodeType === 3 && node.textContent.toLowerCase().includes(lowerTerm)) {
+      nodes.push(node);
     }
     return nodes;
   }
