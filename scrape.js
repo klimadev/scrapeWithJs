@@ -11,17 +11,40 @@
 
 const fs = require('fs');
 const { JSDOM, ResourceLoader, VirtualConsole } = require('jsdom');
-const { fetch } = require('undici');
+const { fetch, Agent } = require('undici');
 
-async function simpleFetch(url, timeout = 10000) {
-  const res = await fetch(url, { keepalive: false, bodyTimeout: timeout });
+async function retryFetch(url, opts = {}, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, opts);
+      // Treat 5xx errors as transient failures, but allow 4xx and 2xx to pass
+      if (res.status >= 200 && res.status < 500) {
+        return res;
+      }
+      throw new Error(`HTTP status ${res.status}`);
+    } catch (e) {
+      if (attempt === maxRetries - 1) throw e;
+      const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s...
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
+async function simpleFetch(url, timeout = 10000, opts = {}) {
+  const defaultHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
+  const res = await retryFetch(url, { keepalive: false, bodyTimeout: timeout, headers: defaultHeaders, ...opts });
   return await res.text();
 }
 
 class UndiciResourceLoader extends ResourceLoader {
+  constructor(fetchOpts = {}) {
+    super();
+    this.fetchOpts = fetchOpts;
+  }
+
   async fetch(url) {
     try {
-      const res = await fetch(url);
+      const res = await retryFetch(url, this.fetchOpts);
       const buf = await res.arrayBuffer();
       return Buffer.from(buf);
     } catch (e) {
@@ -54,13 +77,16 @@ async function renderWithJsdom(url, opts = {}) {
   const virtualConsole = new VirtualConsole();
   if (opts.diagnose) virtualConsole.sendTo(console); else virtualConsole.sendTo(console, { omitJSDOMErrors: true });
 
-  const res = await fetch(url);
+  const defaultHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
+  const fetchOpts = { headers: defaultHeaders, ...opts.fetchOpts };
+
+  const res = await retryFetch(url, fetchOpts);
   const html = await res.text();
 
   const dom = new JSDOM(html, {
     url,
     runScripts: 'dangerously',
-    resources: new UndiciResourceLoader(),
+    resources: new UndiciResourceLoader(fetchOpts),
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(window) {
@@ -90,12 +116,13 @@ async function renderWithJsdom(url, opts = {}) {
         window.__incPending = function(){ window.__pendingRequests = (window.__pendingRequests || 0) + 1; };
         window.__decPending = function(){ window.__pendingRequests = Math.max(0, (window.__pendingRequests || 1) - 1); };
         const _origFetch = fetch;
+        const _fetchOpts = opts.fetchOpts || {};
         window.fetch = async function(input, init){
           try{
             window.__incPending();
           }catch(e){}
           try {
-            const r = await _origFetch(input, init);
+            const r = await _origFetch(input, { ...init, ..._fetchOpts });
             const b = await r.arrayBuffer();
             const body = Buffer.from(b);
             return { ok: r.status>=200&&r.status<300, status: r.status, text: async ()=>body.toString('utf8'), json: async ()=>JSON.parse(body.toString('utf8')), arrayBuffer: async ()=>b, headers: {} };
@@ -170,6 +197,7 @@ async function main() {
   const url = argv[0];
   let out = null; let timeout = 10000; let forceBrowser = false; let diagnose = false;
   let radial = false; let term = null; let radiusLevels = 3; let minRepeat = 2;
+  let insecure = false;
   for (let i=1;i<argv.length;i++){
     if (argv[i]==='--out' && argv[i+1]){ out=argv[i+1]; i++; }
     else if (argv[i]==='--timeout' && argv[i+1]){ timeout = parseInt(argv[i+1],10); i++; }
@@ -179,6 +207,14 @@ async function main() {
     else if (argv[i]==='--term' && argv[i+1]){ term = argv[i+1]; i++; }
     else if (argv[i]==='--radius-levels' && argv[i+1]){ radiusLevels = parseInt(argv[i+1],10); i++; }
     else if (argv[i]==='--min-repeat' && argv[i+1]){ minRepeat = parseInt(argv[i+1],10); i++; }
+    else if (argv[i]==='--insecure') insecure = true;
+  }
+
+  const defaultHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
+  let fetchOpts = { headers: defaultHeaders };
+  if (insecure) {
+    const agent = new Agent({ connect: { rejectUnauthorized: false } });
+    fetchOpts = { ...fetchOpts, dispatcher: agent };
   }
 
   try {
@@ -186,7 +222,7 @@ async function main() {
     if (!forceBrowser) {
       // 1) try simple fetch
       try {
-        const simple = await simpleFetch(url, timeout);
+        const simple = await simpleFetch(url, timeout, fetchOpts);
         if (!needBrowserFallback(simple)) {
           if (out) fs.writeFileSync(out, simple, 'utf8'); else process.stdout.write(simple);
           return;
@@ -195,16 +231,66 @@ async function main() {
 
       // 2) try jsdom render
       try {
-        const res = await fetch(url);
+        const res = await retryFetch(url, fetchOpts);
         const html = await res.text();
         const dom = new JSDOM(html, {
           url,
           runScripts: 'dangerously',
-          resources: new UndiciResourceLoader(),
+          resources: new UndiciResourceLoader(fetchOpts),
           pretendToBeVisual: true,
           virtualConsole: (diagnose ? (new VirtualConsole()).sendTo(console) : (new VirtualConsole()).sendTo(console, { omitJSDOMErrors: true })),
           beforeParse: function(window) {
-            // ...existing code...
+            // light polyfills useful for many dynamic sites
+            try {
+              if (!window.requestAnimationFrame) window.requestAnimationFrame = (cb) => setTimeout(() => cb(Date.now()), 16);
+              if (!window.cancelAnimationFrame) window.cancelAnimationFrame = (id) => clearTimeout(id);
+              // window.scrollTo may be present but unimplemented in JSDOM (throws). Overwrite with a noop that dispatches scroll
+              window.scrollTo = function(x, y) {
+                try {
+                  if (typeof x === 'object' && x !== null) {
+                    y = x.top || x.y || 0;
+                  }
+                  if (window.document && window.document.documentElement) {
+                    try { window.document.documentElement.scrollTop = y || 0; } catch (e) {}
+                    try { window.document.body && (window.document.body.scrollTop = y || 0); } catch (e) {}
+                  }
+                  try { window.dispatchEvent(new window.Event('scroll')); } catch (e) {}
+                } catch (e) {}
+              };
+              if (!window.IntersectionObserver) window.IntersectionObserver = function(cb){ this.observe = (el)=>{ try{ cb([{target:el,isIntersecting:true,intersectionRatio:1}]); }catch(e){} }; this.unobserve=()=>{}; this.disconnect=()=>{}; };
+              if (!window.Image) window.Image = function(){ return { set src(v){}, set onload(v){}, set onerror(v){}, set width(v){}, set height(v){} }; };
+              if (!window.localStorage) window.localStorage = (function(){const s={}; return {getItem:k=>s[k]||null,setItem:(k,v)=>s[k]=String(v),removeItem:k=>delete s[k],clear:()=>{Object.keys(s).forEach(k=>delete s[k])}} })();
+              // basic fetch passthrough using undici
+              // also track pending requests for network-idle detection
+              window.__pendingRequests = 0;
+              window.__incPending = function(){ window.__pendingRequests = (window.__pendingRequests || 0) + 1; };
+              window.__decPending = function(){ window.__pendingRequests = Math.max(0, (window.__pendingRequests || 1) - 1); };
+              const _origFetch = fetch;
+              const _fetchOpts = fetchOpts || {};
+              window.fetch = async function(input, init){
+                try{
+                  window.__incPending();
+                }catch(e){}
+                try {
+                  const r = await _origFetch(input, { ...init, ..._fetchOpts });
+                  const b = await r.arrayBuffer();
+                  const body = Buffer.from(b);
+                  return { ok: r.status>=200&&r.status<300, status: r.status, text: async ()=>body.toString('utf8'), json: async ()=>JSON.parse(body.toString('utf8')), arrayBuffer: async ()=>b, headers: {} };
+                } finally {
+                  try{ window.__decPending(); }catch(e){}
+                }
+              };
+              // log XHR requests if diagnose and track pending XHRs
+              try {
+                const proto = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
+                if (proto) {
+                  const _open = proto.open;
+                  proto.open = function(m,u){ this._url=u; return _open.apply(this, arguments); };
+                  const _send = proto.send;
+                  proto.send = function(){ try{ if (diagnose) console.log('[page XHR]', this._url); try{ window.__incPending(); }catch(e){} }catch(e){} const onreadystatechange = this.onreadystatechange; this.onreadystatechange = function(){ try{ if(this.readyState===4){ try{ window.__decPending(); }catch(e){} } }catch(e){} if(onreadystatechange) return onreadystatechange.apply(this, arguments); }; return _send.apply(this, arguments); };
+                }
+              } catch(e){}
+            } catch(e){}
           }
         });
 
