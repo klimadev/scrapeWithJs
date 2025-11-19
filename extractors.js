@@ -1,6 +1,31 @@
 // extractors.js
 // Função universal de pesquisa radial: localiza menções ao termo e extrai fragmentos relevantes
 
+/**
+ * Remove atributos e conteúdo interno de todos os elementos SVG dentro de um elemento.
+ * Isso é feito para reduzir o tamanho do HTML extraído, pois SVGs são frequentemente grandes e inúteis para a extração de dados.
+ * @param {Element} element O elemento DOM a ser limpo.
+ */
+function cleanSvgContent(element) {
+  if (!element || typeof element.querySelectorAll !== 'function') return;
+
+  const svgs = element.querySelectorAll('svg');
+  svgs.forEach(svg => {
+    // 1. Remover todos os atributos, exceto 'xmlns'
+    const attributes = Array.from(svg.attributes);
+    attributes.forEach(attr => {
+      if (attr.name !== 'xmlns') {
+        svg.removeAttribute(attr.name);
+      }
+    });
+
+    // 2. Remover todos os filhos
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+  });
+}
+
 function performRadialSearch(document, term, opts = {}) {
   const results = [];
   const minRepeat = opts.minRepeat || 2;
@@ -45,6 +70,9 @@ function performRadialSearch(document, term, opts = {}) {
 
     // 3. Extrair HTML do container (o elemento 'best' é o ancestral encontrado)
     if (best && best.outerHTML) {
+      // Limpa o conteúdo de SVGs para reduzir o tamanho do fragmento
+      cleanSvgContent(best);
+
       // The selector is based on the extracted element.
       const contextSelector = best.className ? `.${best.className.split(' ').join('.')}` : best.tagName;
 

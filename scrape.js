@@ -6,7 +6,7 @@
    2) jsdom render (execute JS) with polyfills and interaction simulation
   
   Usage:
-    node scrape_universal.js <url> [--out file] [--timeout ms] [--force-browser] [--diagnose]
+    node scrape_universal.js <url> [--out file] [--timeout ms] [--diagnose]
 */
 
 const fs = require('fs');
