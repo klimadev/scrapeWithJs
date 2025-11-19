@@ -41,7 +41,13 @@ function performRadialSearch(document, term, opts = {}) {
         el = el.parentElement;
       }
     }
-    // 3. Extrair HTML do container
+    // 3. Promover 'best' para o pai se foi encontrado um elemento repetido, para capturar mais contexto.
+    if (repeatCount > 1 && best.parentElement && best.parentElement.tagName !== 'BODY' && best.parentElement.tagName !== 'HTML') {
+      best = best.parentElement;
+      // We keep the original repeatCount, as it refers to the number of items this container holds.
+    }
+
+    // 4. Extrair HTML do container
     if (best && best.outerHTML) {
       results.push({
         html: best.outerHTML,
