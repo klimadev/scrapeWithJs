@@ -168,14 +168,20 @@ async function main() {
   if (argv.length === 0) { console.error('Usage: node scrape_universal.js <url> [--out file] [--timeout ms] [--force-browser] [--diagnose]'); process.exit(2); }
   const url = argv[0];
   let out = null; let timeout = 10000; let forceBrowser = false; let diagnose = false;
+  let radial = false; let term = null; let radiusLevels = 3; let minRepeat = 2;
   for (let i=1;i<argv.length;i++){
     if (argv[i]==='--out' && argv[i+1]){ out=argv[i+1]; i++; }
     else if (argv[i]==='--timeout' && argv[i+1]){ timeout = parseInt(argv[i+1],10); i++; }
     else if (argv[i]==='--force-browser') forceBrowser = true;
     else if (argv[i]==='--diagnose') diagnose = true;
+    else if (argv[i]==='--radial') radial = true;
+    else if (argv[i]==='--term' && argv[i+1]){ term = argv[i+1]; i++; }
+    else if (argv[i]==='--radius-levels' && argv[i+1]){ radiusLevels = parseInt(argv[i+1],10); i++; }
+    else if (argv[i]==='--min-repeat' && argv[i+1]){ minRepeat = parseInt(argv[i+1],10); i++; }
   }
 
   try {
+    const { performRadialSearch } = require('./extractors');
     if (!forceBrowser) {
       // 1) try simple fetch
       try {
@@ -188,9 +194,61 @@ async function main() {
 
       // 2) try jsdom render
       try {
-        const jsdomHtml = await renderWithJsdom(url, { timeout, diagnose });
-        if (!needBrowserFallback(jsdomHtml)) { if (out) fs.writeFileSync(out, jsdomHtml, 'utf8'); else process.stdout.write(jsdomHtml); return; }
-        if (diagnose) console.log('[universal] jsdom indicates fallback needed');
+        const res = await fetch(url);
+        const html = await res.text();
+        const dom = new JSDOM(html, {
+          url,
+          runScripts: 'dangerously',
+          resources: new UndiciResourceLoader(),
+          pretendToBeVisual: true,
+          virtualConsole: (diagnose ? (new VirtualConsole()).sendTo(console) : (new VirtualConsole()).sendTo(console, { omitJSDOMErrors: true })),
+          beforeParse: function(window) {
+            // ...existing code...
+          }
+        });
+
+        // ...existing code de simulação de interação, quiescência, network idle...
+        const maxWait = timeout;
+        const idle = 500;
+        dom.window.addEventListener && dom.window.addEventListener('load', () => {
+          try { dom.window.scrollTo && dom.window.scrollTo(0, dom.window.document.body.scrollHeight); dom.window.dispatchEvent(new dom.window.Event('scroll')); } catch(e){}
+          setTimeout(()=>{ try{ const btn = dom.window.document.querySelector('.load-more, [data-load-more], .btn-load-more'); if(btn) btn.click(); }catch(e){} }, 300);
+        });
+        await waitForQuiescence(dom.window, { timeout: maxWait, quiet: idle });
+        // network idle
+        const networkIdleMs = 2000;
+        const networkMaxWait = 30000;
+        const startNet = Date.now();
+        function pending() { try { return dom.window.__pendingRequests || 0 } catch(e){ return 0 } }
+        let lastZero = pending() === 0 ? Date.now() : 0;
+        while (Date.now() - startNet < networkMaxWait) {
+          if (pending() === 0) {
+            if (lastZero === 0) lastZero = Date.now();
+            if (Date.now() - lastZero >= networkIdleMs) break;
+          } else {
+            lastZero = 0;
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        // optional post-wait
+        if (out && radial && term) {
+          // Executa pesquisa radial após renderização completa
+          const results = performRadialSearch(dom.window.document, term, { radiusLevels, minRepeat });
+          if (results.length === 0) {
+            fs.writeFileSync(out, '<!-- Nenhum fragmento encontrado -->', 'utf8');
+          } else {
+            // Salva todos os fragmentos em um único arquivo, separados
+            const htmlOut = results.map((r, i) => `<!-- Fragmento ${i+1} | Selector: ${r.selector} | Repeat: ${r.repeatCount} -->\n${r.html}`).join('\n\n');
+            fs.writeFileSync(out, htmlOut, 'utf8');
+          }
+        } else {
+          // Comportamento padrão: salva HTML completo
+          const outHtml = dom.serialize();
+          if (out) fs.writeFileSync(out, outHtml, 'utf8'); else process.stdout.write(outHtml);
+        }
+        try { dom.window.close(); } catch(e){}
+        return;
       } catch(e) { if (diagnose) console.error('[universal] jsdom render failed', e && e.message); }
     }
 
