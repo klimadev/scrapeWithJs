@@ -75,25 +75,18 @@ function waitForQuiescence(window, opts = {}) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  if (argv.length === 0) { console.error('Usage: node scrape_universal.js <url> [--out file] [--timeout ms] [--force-browser] [--diagnose] [--render-links] [--max-links N] [--link-timeout ms]'); process.exit(2); }
+  if (argv.length === 0) { console.error('Usage: node scrape.js <url> --term "search term" --out output.html'); process.exit(2); }
   const url = argv[0];
-  let out = null; let timeout = 10000; let forceBrowser = false; let diagnose = false;
-  let radial = false; let term = null; let radiusLevels = 3; let minRepeat = 2;
-  let insecure = false; let renderLinks = false; let maxLinks = 10; let linkTimeout = 15000;
+  let out = null; let term = null;
+  let timeout = 10000; let forceBrowser = false; let diagnose = false;
+  let radial = true; let radiusLevels = 3; let minRepeat = 2;
+  let insecure = true; let renderLinks = true; let maxLinks = 1; let linkTimeout = 15000;
   for (let i=1;i<argv.length;i++){
     if (argv[i]==='--out' && argv[i+1]){ out=argv[i+1]; i++; }
-    else if (argv[i]==='--timeout' && argv[i+1]){ timeout = parseInt(argv[i+1],10); i++; }
-    else if (argv[i]==='--force-browser') forceBrowser = true;
-    else if (argv[i]==='--diagnose') diagnose = true;
-    else if (argv[i]==='--radial') radial = true;
     else if (argv[i]==='--term' && argv[i+1]){ term = argv[i+1]; i++; }
-    else if (argv[i]==='--radius-levels' && argv[i+1]){ radiusLevels = parseInt(argv[i+1],10); i++; }
-    else if (argv[i]==='--min-repeat' && argv[i+1]){ minRepeat = parseInt(argv[i+1],10); i++; }
-    else if (argv[i]==='--insecure') insecure = true;
-    else if (argv[i]==='--render-links') renderLinks = true;
-    else if (argv[i]==='--max-links' && argv[i+1]){ maxLinks = parseInt(argv[i+1],10); i++; }
-    else if (argv[i]==='--link-timeout' && argv[i+1]){ linkTimeout = parseInt(argv[i+1],10); i++; }
+    // Ignore unknown arguments to allow flexibility
   }
+  if (!term) { console.error('Error: --term is required'); process.exit(2); }
 
   const defaultHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
   let fetchOpts = { headers: defaultHeaders };
