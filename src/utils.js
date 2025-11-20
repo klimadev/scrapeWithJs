@@ -162,6 +162,33 @@ function applyJsdomPolyfills(window, opts = {}) {
       return;
     }
   };
+
+  // Polyfill MessageChannel / MessagePort for scripts that expect it (e.g. clarity.js)
+  try {
+    if (typeof window.MessageChannel === 'undefined') {
+      function MessagePort() {}
+      MessagePort.prototype.postMessage = function(msg) {
+        // asynchronous dispatch to mimic real MessagePort
+        setTimeout(() => {
+          try {
+            if (typeof this.onmessage === 'function') this.onmessage({ data: msg });
+          } catch (e) {}
+        }, 0);
+      };
+      MessagePort.prototype.start = function() {};
+
+      function MessageChannel() {
+        this.port1 = new MessagePort();
+        this.port2 = new MessagePort();
+        const p1 = this.port1, p2 = this.port2;
+        p1.postMessage = function(msg) { setTimeout(() => { try { if (typeof p2.onmessage === 'function') p2.onmessage({ data: msg }); } catch (e) {} }, 0); };
+        p2.postMessage = function(msg) { setTimeout(() => { try { if (typeof p1.onmessage === 'function') p1.onmessage({ data: msg }); } catch (e) {} }, 0); };
+      }
+
+      window.MessageChannel = MessageChannel;
+      window.MessagePort = MessagePort;
+    }
+  } catch (e) {}
 }
 
 /**
