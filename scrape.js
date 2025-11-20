@@ -206,6 +206,9 @@ async function main() {
           await new Promise(r => setTimeout(r, 200));
         }
 
+        // Remove scripts dynamically added by JS to avoid clutter in output
+        dom.window.document.querySelectorAll('script').forEach(script => script.remove());
+
         // NEW: Improved output logic
         if (out && radial && term) {
           // NEW: Enhanced radial search with organized linked content
@@ -232,7 +235,8 @@ async function main() {
                     maxLinks: linksPerFragment,
                     linkTimeout: linkTimeout,
                     diagnose: diagnose,
-                    fetchOpts: fetchOpts
+                    fetchOpts: fetchOpts,
+                    baseUrl: url
                   };
                   
                   const fragmentWithLinks = await processLinksFromContent(r.html, linkProcessingOptions);
@@ -265,7 +269,8 @@ async function main() {
             maxLinks: maxLinks,
             linkTimeout: linkTimeout,
             diagnose: diagnose,
-            fetchOpts: fetchOpts
+            fetchOpts: fetchOpts,
+            baseUrl: url
           };
           
           try {

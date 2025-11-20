@@ -286,7 +286,13 @@ function convertToLlmReadyMarkdown(html) {
   
   // Remove script tags completely
   markdown = markdown.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  
+
+  // Remove inline JavaScript code patterns that appear as text content
+  markdown = markdown.replace(/\$\(document\)\.ready\(function\(\)\s*\{[^}]*\}\);/gs, '');
+  markdown = markdown.replace(/window\.addEventListener\(['"]scroll['"],\s*function\(\)\s*\{[^}]*\}\);/gs, '');
+  markdown = markdown.replace(/console\.log\([^)]*\);?/g, '');
+  markdown = markdown.replace(/var\s+\w+\s*=\s*\$\([^)]+\)\.\w+\(\);/g, '');
+
   // Remove window global variables with JSON data
   markdown = markdown.replace(/window\.__[A-Z_]+[\s]*=[\s]*\{[^}]*\}/g, '');
   markdown = markdown.replace(/__INITIAL_STATE__[\s]*=[\s]*\{[^}]*\}/g, '');
@@ -467,8 +473,9 @@ function waitForQuiescence(window, opts = {}) {
  * @param {string} html The HTML content to extract links from
  * @returns {Array} Array of filtered URLs (non-image links)
  */
-function extractFilteredLinks(html) {
-  const dom = new JSDOM(html);
+function extractFilteredLinks(html, baseUrl) {
+  // If a baseUrl is provided, let JSDOM know so document.baseURI is correct
+  const dom = baseUrl ? new JSDOM(html, { url: baseUrl }) : new JSDOM(html);
   const document = dom.window.document;
   const links = document.querySelectorAll('a[href]');
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp', '.ico'];
@@ -492,16 +499,56 @@ function extractFilteredLinks(html) {
     
     if (!isImage) {
       try {
-        // Resolve relative URLs to absolute URLs
-        const absoluteUrl = new URL(href, document.baseURI).href;
-        filteredLinks.push(absoluteUrl);
-      } catch (e) {
-        // Skip invalid URLs
-      }
+          // Resolve relative URLs to absolute URLs. Prefer explicit baseUrl when provided.
+          const resolverBase = baseUrl || document.baseURI || undefined;
+          const absoluteUrl = resolverBase ? new URL(href, resolverBase).href : new URL(href, document.baseURI).href;
+          filteredLinks.push(absoluteUrl);
+        } catch (e) {
+          // Skip invalid URLs
+        }
     }
   });
   
+  // Also detect markdown-style links and resolve them when baseUrl is provided
+  try { extractMarkdownLinks(html, baseUrl, filteredLinks); } catch(e){}
   return filteredLinks;
+}
+
+// Helper: resolve markdown-style links if present in raw content
+function extractMarkdownLinks(html, baseUrl, existing) {
+  const mdLinkRegex = /\[[^\]]*\]\(([^)]+)\)/g;
+  let m;
+  while ((m = mdLinkRegex.exec(html)) !== null) {
+    const href = m[1];
+    if (!href) continue;
+    const hrefTrim = href.trim();
+    if (!hrefTrim || hrefTrim.startsWith('javascript:') || hrefTrim.startsWith('mailto:') || hrefTrim.startsWith('#')) continue;
+    try {
+      if (!baseUrl) continue; // avoid guessing when no base is provided
+      const absoluteUrl = new URL(hrefTrim, baseUrl).href;
+      if (!existing.includes(absoluteUrl)) existing.push(absoluteUrl);
+    } catch (e) {
+      // skip invalid
+    }
+  }
+  return existing;
+}
+
+// Resolve markdown-style link targets inside a markdown string using a base URL
+function resolveMarkdownLinks(markdown, baseUrl) {
+  if (!baseUrl || !markdown) return markdown;
+  const mdLinkRegex = /\[([^\]]*)\]\(([^)]+)\)/g;
+  return markdown.replace(mdLinkRegex, (match, text, href) => {
+    const hrefTrim = href.trim();
+    if (!hrefTrim || hrefTrim.startsWith('javascript:') || hrefTrim.startsWith('mailto:') || hrefTrim.startsWith('#')) return match;
+    try {
+      // If already absolute, leave as-is
+      const maybe = new URL(hrefTrim, baseUrl);
+      return `[${text}](${maybe.href})`;
+    } catch (e) {
+      return match;
+    }
+  });
 }
 
 /**
@@ -732,14 +779,17 @@ async function renderLinkAndExtractMarkdown(url, opts = {}) {
  */
 async function processLinksFromContent(html, opts = {}) {
   if (!opts.renderLinks) {
-    return convertToLlmReadyMarkdown(html);
+    let md = convertToLlmReadyMarkdown(html);
+    if (opts.baseUrl) md = resolveMarkdownLinks(md, opts.baseUrl);
+    return md;
   }
   
-  const baseMarkdown = convertToLlmReadyMarkdown(html);
+  let baseMarkdown = convertToLlmReadyMarkdown(html);
+  if (opts.baseUrl) baseMarkdown = resolveMarkdownLinks(baseMarkdown, opts.baseUrl);
   let linkContent = '';
   
   try {
-    const links = extractFilteredLinks(html);
+    const links = extractFilteredLinks(html, opts.baseUrl);
     
     if (links.length === 0) {
       return baseMarkdown;
