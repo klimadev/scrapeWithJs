@@ -19,14 +19,21 @@ async function main() {
   if (argv.length === 0) { console.error('Usage: node scrape.js <url> --term "search term" --out output.html'); process.exit(2); }
   const url = argv[0];
   let out = null; let term = null;
-  let detalhe = null;
+  // suporte a múltiplos detalhes: armazenamos numa lista. Aceita
+  // `--detalhe "a,b"` ou flags repetidas `--detalhe a --detalhe b`.
+  let detalheList = [];
   let timeout = 10000; let forceBrowser = false; let diagnose = false;
   let radial = true; let radiusLevels = 3; let minRepeat = 2;
   let insecure = true; let renderLinks = true; let maxLinks = 1; let linkTimeout = 15000;
   for (let i=1;i<argv.length;i++){
     if (argv[i]==='--out' && argv[i+1]){ out=argv[i+1]; i++; }
     else if (argv[i]==='--term' && argv[i+1]){ term = argv[i+1]; i++; }
-    else if (argv[i]==='--detalhe' && argv[i+1]){ detalhe = argv[i+1]; i++; }
+    else if (argv[i]==='--detalhe' && argv[i+1]){
+      const raw = argv[i+1];
+      // permitir lista separada por vírgula
+      raw.split(',').map(s => s.trim()).filter(Boolean).forEach(s => detalheList.push(s));
+      i++;
+    }
     // Ignore unknown arguments to allow flexibility
   }
   if (!term) { console.error('Error: --term is required'); process.exit(2); }
@@ -133,18 +140,18 @@ async function main() {
               }
 
               // Aplicar filtro de detalhe (se fornecido): manter apenas fragmentos
-              // cujo conteúdo final contenha o termo do detalhe (busca case-insensitive).
-              if (detalhe && typeof detalhe === 'string' && detalhe.trim().length > 0) {
+              // que contenham todos os termos especificados em `detalheList` (AND).
+              if (Array.isArray(detalheList) && detalheList.length > 0) {
                 try {
                   const lowerFragment = fragmentContent.toLowerCase();
-                  const lowerDetalhe = detalhe.toLowerCase();
-                  if (lowerFragment.indexOf(lowerDetalhe) === -1) {
-                    // detalhe não encontrado -> pular este fragmento
-                    if (diagnose) console.log(`[detalhe] Pulando fragmento ${i+1}: detalhe "${detalhe}" não encontrado.`);
+                  const missing = detalheList.find(d => {
+                    try { return !lowerFragment.includes(d.toLowerCase()); } catch(e){ return true }
+                  });
+                  if (missing) {
+                    if (diagnose) console.log(`[detalhe] Pulando fragmento ${i+1}: detalhe "${missing}" não encontrado.`);
                     continue;
                   }
                 } catch (e) {
-                  // Em caso de erro inesperado, não bloquear o processamento
                   if (diagnose) console.error('[detalhe] Erro ao aplicar filtro de detalhe:', e && e.message);
                 }
               }

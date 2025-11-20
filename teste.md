@@ -27,7 +27,7 @@ R$ 82.900,00
 
 # JEEP RENEGADE 1.8 LONGITUDE 4X2 16V 
 
-Visitas: 723 
+Visitas: 726 
 
 ![Foto 1](https://imgserver.autocarro.com.br/fotos/grande/1842489_jeep-renegade-1-8-longitude-4x2-2021-preta_084ad2.jpg)
 
@@ -134,7 +134,7 @@ R$ 65.900,00
 
 # JEEP RENEGADE 1.8 SPORT 4X2 16V 
 
-Visitas: 167 
+Visitas: 170 
 
 ![Foto 1](https://imgserver.autocarro.com.br/fotos/grande/1898448_jeep-renegade-1-8-sport-4x2-2016-preta_19f8e2.jpg)
 
@@ -166,3 +166,43 @@ Câmbio Manual
 *   Ipva Pago
 
 TOP IMPECÁVEL❗❗❗ 😃OLÁ AMIGOS, APRESENTO ESSE BELO EXEMPLAR DA JEEP RENEGADE SPORT 1.8, CÂMBIO MANUAL DO ANO 2016. 👉CARRO COM PROCEDÊNCIA, IPVA 2025 PAGO, DOCUMENTAÇÃO EM DIA, EM EXCELENTE ESTADO, TODO ORIGINAL. 👍VEICULO IMPECÁVEL, DIFERENCIADO, ABASTECER E ANDAR, NADA PRA FAZER. CARRO QUITADO, SEM DIVIDAS, TRANSFERE NA HORA. POSSUI: 🚗\*MOTOR 1.8 🚗\*CÂMBIO MANUAL 🚗\*DIREÇÃO ELÉTRICA 🚗\*FREIOS ABS 🚗\*AIRBAGS 🚗\*RÁDIO ORIGINAL 🚗\*AR CONDICIONADO 🚗\*SENSOR DE ESTACIONAMENTO 🚗\*VOLANTE MULTIFUNCIONAL 🚗\*COMPUTADOR DE BORDO 🚗\*FREIO DE MÃO ELETRÔNICO 🚗\*RETROVISORES ELÉTRICOS 🚗\*VIDROS ELÉTRICOS 🚗\*PORTA MALAS ELÉTRICO 🚗\*DESEMBAÇADOR TRASEIRO 🚗\*TRAVAS ELÉTRICAS 🚗\*AR QUENTE 💰 VALOR À VISTA R$ 65.900,00💰 FONE/WHATS: 📲(51) 99561-4618 OU 📞FIXO: (51) 3110.4174 🔥TRABALHAMOS COM TODAS AS FINANCEIRAS. ENTRADA E O RESTANTE EM ATÉ 60X.🔥 💳TAMBÉM PARCELAMOS EM ATÉ 24X NO CARTÃO DE CRÉDITO.💳 MAGNAUTOS MULTIMARCAS 📌AV. ASSIS BRASIL, 5240📌 PORTO ALEGRE/RS
+
+<!-- FRAGMENTO 3 | SELETOR: .offer-item-mobile_container__BYqvc | MÉTODO: fixed_radial | TERMO: Jeep -->
+
+![JEEP](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_c8f660.jpg) 
+
+2018 
+
+R$ 74.900,00
+
+68.000 km Automático FLEX VERDE 
+
+](https://m.autocarro.com.br/magnautosmultimarcas/anuncio/jeep-renegade-1-8-sport-4x2-2018-verde/1901622)
+
+### Linked Content 1: https://m.autocarro.com.br/magnautosmultimarcas/anuncio/jeep-renegade-1-8-sport-4x2-2018-verde/1901622
+
+Visitas: 65 
+
+![Foto 1](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_c8f660.jpg)
+
+![Foto 2](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_1f6d2c.jpg)
+
+![Foto 3](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_65adb8.jpg)
+
+![Foto 4](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_528f44.jpg)
+
+![Foto 5](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_73cfb6.jpg)
+
+![Foto 6](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_0f995b.jpg)
+
+![Foto 7](https://imgserver.autocarro.com.br/fotos/grande/1901622_jeep-renegade-1-8-sport-4x2-2018-verde_d7292d.jpg)
+
+Kilometragem 68.000 KM 
+
+Ano/Modelo 2017/2018 
+
+Placa FXXXX71 
+
+Cor VERDE 
+
+TOP IMPECÁVEL ❗❗❗ 😃OLÁ AMIGOS, APRESENTO ESSE BELO EXEMPLAR DA JEEP RENEGADE SPORT 1.8, CÂMBIO AUTOMÁTICO DO ANO 2018. 👉CARRO COM PROCEDÊNCIA, ÚNICO DONO, DOCUMENTAÇÃO EM DIA, EM EXCELENTE ESTADO, INTERIOR LIMPO E ESTOFAMENTOS IGUAIS A NOVO. 👍VEICULO IMPECÁVEL, DIFERENCIADO, ABASTECER E ANDAR, NADA PRA FAZER. CARRO QUITADO, SEM DIVIDAS, TRANSFERE NA HORA. POSSUI: 🚗\*MOTOR 1.8 🚗\*CÂMBIO AUTOMÁTICO 🚗\*DIREÇÃO ELÉTRICA 🚗\*FREIOS ABS 🚗\*AIRBAGS 🚗\*CONTROLE DE TRAÇÃO 🚗\*MULTIMÍDIA 🚗\*AR CONDICIONADO 🚗\*CÂMERA DE RÉ 🚗\*VOLANTE MULTIFUNCIONAL 🚗\*COMPUTADOR DE BORDO 🚗\*PILOTO AUTOMÁTICO 🚗\*FREIO DE MÃO ELETRÔNICO 🚗\*RETROVISORES ELÉTRICOS 🚗\*VIDROS ELÉTRICOS 🚗\*PORTA MALAS ELÉTRICO 🚗\*LIMPADOR TRASEIRO 🚗\*DESEMBAÇADOR TRASEIRO 🚗\*TRAVAS ELÉTRICAS 🚗\*AR QUENTE 💰VALOR À VISTA R$ 74.900,00💰 FONE/WHATS: 📲(51) 99561-4618 OU 📞FIXO: (51) 3110.4174 🔥TRABALHAMOS COM TODAS AS FINANCEIRAS. ENTRADA E O RESTANTE EM ATÉ 60X.🔥 💳TAMBÉM PARCELAMOS EM ATÉ 24X NO CARTÃO DE CRÉDITO.💳 MAGNAUTOS MULTIMARCAS 📌AV. ASSIS BRASIL, 5240📌 PORTO ALEGRE/RS
