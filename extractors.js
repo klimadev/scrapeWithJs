@@ -1,5 +1,61 @@
 // extractors.js
 // Função universal de pesquisa radial: localiza menções ao termo e extrai fragmentos relevantes
+const TurndownService = require('turndown');
+
+/**
+ * Converte um fragmento HTML em Markdown formatado para ser mais limpo e amigável a LLMs.
+ * Remove atributos e elementos irrelevantes para a compreensão do conteúdo.
+ * @param {string} html O HTML a ser convertido.
+ * @returns {string} O conteúdo em Markdown.
+ */
+function convertToLlmReadyMarkdown(html) {
+  // Inicializa Turndown com configurações para LLM-readiness
+  const td = new TurndownService({
+    headingStyle: 'atx',
+    codeBlockStyle: 'fenced',
+    hr: '---'
+  });
+
+// Regra 1: Remover todos os links (tags <a>) e manter apenas o texto
+// Links geralmente não são úteis para extração de conteúdo e poluem o Markdown
+//td.addRule('remove-links', {
+//  filter: ['a'],
+//  replacement: function (content) {
+//    return content;
+//  }
+// });
+
+  // Regra 2: Remover elementos comuns de navegação e rodapé se aparecerem (embora a extração radial deve limitar isso)
+  td.remove('nav');
+  td.remove('footer');
+
+  // Regra 3: Remover elementos com classes comuns de placeholder ou visual
+  td.addRule('visual-cleanup', {
+      filter: (node, options) => {
+          const classList = (node.className || '').split(' ');
+          const unwantedClasses = ['skip-content', 'sr-only', 'hidden', 'visually-hidden', 'icon', 'svg'];
+          return unwantedClasses.some(cls => classList.includes(cls));
+      },
+      replacement: () => ''
+  });
+
+  td.addRule('fix-space', {
+      filter: (node) => {
+          return node.nodeType === 1 && ["SPAN", "B", "EM", "STRONG"].includes(node.nodeName);
+      },
+      replacement: (content) => {
+        return content.trim() + ' ';
+      }
+  });
+
+  // Regra 4: Limpeza final de espaços em branco excessivos
+  let markdown = td.turndown(html);
+  
+  // Limpa linhas vazias consecutivas (> 2) e espaços em branco no início/fim
+  markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
+  
+  return markdown;
+}
 
 /**
  * Remove atributos e conteúdo interno de todos os elementos SVG dentro de um elemento.
@@ -90,4 +146,4 @@ function performRadialSearch(document, term, opts = {}) {
   return results;
 }
 
-module.exports = { performRadialSearch };
+module.exports = { performRadialSearch, convertToLlmReadyMarkdown };

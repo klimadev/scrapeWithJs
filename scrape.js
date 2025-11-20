@@ -218,7 +218,7 @@ async function main() {
   }
 
   try {
-    const { performRadialSearch } = require('./extractors');
+    const { performRadialSearch, convertToLlmReadyMarkdown } = require('./extractors');
     if (!forceBrowser) {
       // 1) try simple fetch
       try {
@@ -328,9 +328,14 @@ async function main() {
           if (results.length === 0) {
             fs.writeFileSync(out, '<!-- Nenhum fragmento encontrado -->', 'utf8');
           } else {
-            // Salva todos os fragmentos em um único arquivo, separados
-            const htmlOut = results.map((r, i) => `<!-- Fragmento ${i+1} | Selector: ${r.selector} | Repeat: ${r.repeatCount} -->\n${r.html}`).join('\n\n');
-            fs.writeFileSync(out, htmlOut, 'utf8');
+            // Salva todos os fragmentos convertidos em Markdown, separados
+            const markdownOut = results.map((r, i) => {
+              const markdown = convertToLlmReadyMarkdown(r.html);
+              // A saída LLM-ready incluirá o contexto em formato de comentário para LLM
+              return `<!-- FRAGMENTO ${i+1} | SELETOR: ${r.selector} | MÉTODO: ${r.method} | TERMO: ${r.term} -->\n${markdown}`;
+            }).join('\n\n---\n\n');
+            
+            fs.writeFileSync(out, markdownOut, 'utf8');
           }
         } else {
           // Comportamento padrão: salva HTML completo
