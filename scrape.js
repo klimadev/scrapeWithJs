@@ -101,20 +101,21 @@ async function main() {
         // Remove scripts dynamically added by JS
         dom.window.document.querySelectorAll('script').forEach(script => script.remove());
 
-        // Output logic
-        if (out && radial && term) {
-          // Radial search with linked content
+        // Determine final output content
+        let finalContent = '';
+
+        if (radial && term) {
           const results = performRadialSearch(dom.window.document, term, { radiusLevels, minRepeat });
+          const fragmentOutputs = [];
+
           if (results.length === 0) {
-            const emptyNote = '<!-- Nenhum fragmento encontrado -->';
-            const cleanedEmpty = duplicateRemover ? duplicateRemover.removeDuplicates(emptyNote) : emptyNote;
-            fs.writeFileSync(out, cleanedEmpty, 'utf8');
+            finalContent = '<!-- Nenhum fragmento encontrado -->';
           } else {
-            const fragmentOutputs = [];
             for (let i = 0; i < results.length; i++) {
               const r = results[i];
               let fragmentContent = `<!-- FRAGMENTO ${i+1} | SELETOR: ${r.selector} | MÉTODO: ${r.method} | TERMO: ${r.term} -->\n`;
               fragmentContent += convertToLlmReadyMarkdown(r.html);
+
               if (renderLinks) {
                 try {
                   const linksPerFragment = Math.max(1, Math.floor(maxLinks / results.length));
@@ -139,8 +140,7 @@ async function main() {
                 }
               }
 
-              // Aplicar filtro de detalhe (se fornecido): manter apenas fragmentos
-              // que contenham todos os termos especificados em `detalheList` (AND).
+              // Aplicar filtro de detalhe (se fornecido)
               if (Array.isArray(detalheList) && detalheList.length > 0) {
                 try {
                   const lowerFragment = fragmentContent.toLowerCase();
@@ -149,7 +149,7 @@ async function main() {
                   });
                   if (missing) {
                     if (diagnose) console.log(`[detalhe] Pulando fragmento ${i+1}: detalhe "${missing}" não encontrado.`);
-                    continue;
+                    continue; // Pula este fragmento
                   }
                 } catch (e) {
                   if (diagnose) console.error('[detalhe] Erro ao aplicar filtro de detalhe:', e && e.message);
@@ -158,11 +158,10 @@ async function main() {
 
               fragmentOutputs.push(fragmentContent);
             }
-            const finalOutput = fragmentOutputs.join('\n\n---\n\n');
-            const cleanedFinal = duplicateRemover ? duplicateRemover.removeDuplicates(finalOutput) : finalOutput;
-            fs.writeFileSync(out, cleanedFinal, 'utf8');
+            finalContent = fragmentOutputs.join('\n\n---\n\n');
           }
         } else if (renderLinks) {
+          // Existing renderLinks logic for full HTML
           const html = dom.serialize();
           const linkProcessingOptions = {
             renderLinks: true,
@@ -173,24 +172,19 @@ async function main() {
             baseUrl: url
           };
           try {
-            const contentWithLinks = await processLinksFromContent(html, linkProcessingOptions);
-            const cleanedContentWithLinks = duplicateRemover ? duplicateRemover.removeDuplicates(contentWithLinks) : contentWithLinks;
-            if (out) fs.writeFileSync(out, cleanedContentWithLinks, 'utf8'); else process.stdout.write(cleanedContentWithLinks);
+            finalContent = await processLinksFromContent(html, linkProcessingOptions);
           } catch (error) {
             if (diagnose) console.error('[renderLinks] Error processing links:', error.message);
-            const fallbackContent = convertToLlmReadyMarkdown(html);
-            const cleanedFallback = duplicateRemover ? duplicateRemover.removeDuplicates(fallbackContent) : fallbackContent;
-            if (out) fs.writeFileSync(out, cleanedFallback, 'utf8'); else process.stdout.write(cleanedFallback);
+            finalContent = convertToLlmReadyMarkdown(html);
           }
-        } else if (!out) {
-          const content = convertToLlmReadyMarkdown(dom.serialize());
-          const cleanedContent = duplicateRemover ? duplicateRemover.removeDuplicates(content) : content;
-          process.stdout.write(cleanedContent);
         } else {
-          const outHtml = dom.serialize();
-          const cleanedOutHtml = duplicateRemover ? duplicateRemover.removeDuplicates(outHtml) : outHtml;
-          if (out) fs.writeFileSync(out, cleanedOutHtml, 'utf8'); else process.stdout.write(cleanedOutHtml);
+          // Existing default markdown conversion
+          finalContent = convertToLlmReadyMarkdown(dom.serialize());
         }
+
+        // Final output writing
+        const cleanedFinal = duplicateRemover ? duplicateRemover.removeDuplicates(finalContent) : finalContent;
+        if (out) fs.writeFileSync(out, cleanedFinal, 'utf8'); else process.stdout.write(cleanedFinal);
         try { dom.window.close(); } catch(e){}
         return;
       } catch(e) { if (diagnose) console.error('[universal] jsdom render failed', e && e.message); }
